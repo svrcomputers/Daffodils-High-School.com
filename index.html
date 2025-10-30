@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daffodils High School – Online Exam System</title>
+<style>
+:root{
+  --blue:#1976d2;
+  --light:#f4f8ff;
+  --text:#222;
+  --border:#ccc;
+}
+body{
+  font-family:'Segoe UI',sans-serif;
+  margin:0;
+  background:var(--light);
+  color:var(--text);
+}
+header{
+  background:var(--blue);
+  color:#fff;
+  text-align:center;
+  padding:5px 0;
+}
+main{
+  max-width:1000px;
+  margin:25px auto;
+  background:#fff;
+  padding:25px 30px;
+  border-radius:10px;
+  box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+h2{color:var(--blue);margin-top:0}
+input,select,textarea,button{
+  width:100%;
+  padding:8px;
+  margin:6px 0 14px;
+  border:1px solid var(--border);
+  border-radius:6px;
+  font-size:15px;
+}
+button{
+  background:var(--blue);
+  color:#fff;
+  border:none;
+  cursor:pointer;
+  font-weight:600;
+  border-radius:6px;
+}
+button:hover{background:#125aa3}
+.clear-btn{background:#888}
+.hidden{display:none!important}
+details{
+  margin-bottom:8px;
+  border:1px solid #ddd;
+  padding:8px;
+  border-radius:6px;
+  background:#f9fbff;
+}
+footer{
+  text-align:center;
+  background:var(--blue);
+  color:#fff;
+  padding:12px;
+  margin-top:25px;
+  border-radius:0 0 10px 10px;
+}
+.exam-features{
+  background:#f3f8ff;
+  padding:15px;
+  border-radius:8px;
+  margin-top:20px;
+}
+.exam-features ul{margin:0;padding-left:20px}
+.table-box{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+}
+.table-box th,.table-box td{
+  border:1px solid #ccc;
+  padding:8px;
+  text-align:left;
+  font-size:14px;
+}
+.table-box th{background:#e8f0fe}
+.admin-actions button{
+  width:auto;
+  margin-right:6px;
+  font-size:14px;
+  padding:6px 10px;
+}
+#timerDisplay{
+  font-weight:600;
+  color:#d32f2f;
+  margin-top:10px;
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎓 School/College Online Exam System</h1>
+  <h1>Daffodils High School</h1>
+  <h3>Empowering Smart Learning</h3>
+</header>
+ <marquee behavior="scroll" direction="left" scrollamount="6">
+            <a href="tel:+918500172644" aria-label="Call Application Support">For Application Support, Please Feel Free to call us : 8500172644</a>
+        </marquee>
+
+<main>
+  <!-- Login / Register Section -->
+  <div id="auth-section">
+    <h2>Registration / Login</h2>
+
+    <label>Select Role:</label>
+    <select id="role">
+      <option value="student">Student</option>
+      <option value="teacher">Teacher</option>
+      <option value="admin">Admin</option>
+    </select>
+
+    <div id="commonFields">
+      <label>Name:</label><input id="authName" placeholder="Enter Name">
+      <label>ID:</label><input id="authId" placeholder="Enter ID">
+    </div>
+
+    <div id="extraFields"></div>
+
+    <button id="registerBtn">Register</button>
+    <button id="loginBtn">Login</button>
+    <button class="clear-btn" id="clearBtn">Clear</button>
+
+    <div class="exam-features">
+      <h3>Exam Features</h3>
+      <ul>
+        <li>Secure Teacher & Student registration</li>
+         <li>Separate login and registration for Teacher, Student, and Admin</li>
+        <li>MCQ, Fill in the Blanks & True/False support</li>
+        <li>Teachers can add, edit, and manage questions class-wise and topic-wise in Question Bank</li>
+        <li>Students can generate exams automatically from the question bank.</li>
+        <li>Exam timer with auto-submit</li>
+        <li>Instant result summary showing student answers and correct answers.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Dashboards -->
+  <div id="teacher-dashboard" class="hidden"></div>
+  <div id="student-dashboard" class="hidden"></div>
+  <div id="admin-dashboard" class="hidden"></div>
+</main>
+
+<footer>© Daffodils High School | Designed & Developed by SVR Computers</footer>
+<script>
+// ===== Basic Helpers =====
+function save(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function load(k){return JSON.parse(localStorage.getItem(k)||"[]")}
+function clearAll(...ids){ids.forEach(i=>{const e=document.getElementById(i);if(e)e.value=""})}
+
+let currentUser=null,currentRole=null,lastTopic="",timer=null;
+
+// ===== Role Inputs =====
+const roleSel=document.getElementById("role"),
+      extraDiv=document.getElementById("extraFields"),
+      commonDiv=document.getElementById("commonFields");
+roleSel.onchange=setExtra;setExtra();
+
+function setExtra(){
+ const r=roleSel.value;let html="";
+ if(r==="teacher")
+   html='<label>Subject:</label><input id="extraInput" placeholder="Enter Subject"><label>Password:</label><input type="password" id="authPass">';
+ else if(r==="student")
+   html='<label>Class:</label><input id="extraInput" placeholder="Enter Class (9 or 10)"><label>Password:</label><input type="password" id="authPass">';
+ else if(r==="admin")
+   html='<label>Username:</label><input id="adminUser" placeholder="Admin Username"><label>Password:</label><input type="password" id="adminPass">';
+ extraDiv.innerHTML=html;
+ document.getElementById("registerBtn").style.display=(r==="admin")?"none":"inline-block";
+ commonDiv.style.display=(r==="admin")?"none":"block";
+}
+
+// ===== Registration =====
+document.getElementById("registerBtn").onclick=()=>{
+ const role=roleSel.value;
+ if(role==="admin")return alert("Admin cannot register");
+ const name=authName.value.trim(),id=authId.value.trim(),extra=extraInput.value.trim(),pwd=authPass.value.trim();
+ if(!name||!id||!pwd||!extra)return alert("All fields required!");
+ const key=role+"s",list=load(key);
+ if(list.some(x=>x.id===id))return alert("ID already exists!");
+ let user={name,id,pwd};
+ if(role==="teacher")user.subject=extra;
+ if(role==="student")user.class=extra;
+ list.push(user);save(key,list);
+ alert("Registered successfully!");
+ clearAll("authName","authId","extraInput","authPass");
+};
+
+// ===== Login =====
+document.getElementById("loginBtn").onclick=()=>{
+ const role=roleSel.value;
+ if(role==="admin"){
+   const u=adminUser.value,p=adminPass.value;
+   if(u==="admin"&&p==="admin123"){currentRole="admin";currentUser={name:"Admin"};showAdmin();}
+   else alert("Invalid admin login");
+   return;
+ }
+ const id=authId.value.trim(),pwd=authPass.value.trim(),key=role+"s",list=load(key);
+ let user=list.find(u=>u.id===id&&u.pwd===pwd);
+ if(!user)return alert("Invalid credentials");
+ currentUser=user;currentRole=role;
+ if(role==="teacher")showTeacher();else showStudent();
+};
+
+document.getElementById("clearBtn").onclick=()=>clearAll("authName","authId","extraInput","authPass","adminUser","adminPass");
+
+// ===== Session Persistence =====
+window.addEventListener("load",()=>{
+ const s=JSON.parse(localStorage.getItem("session")||"{}");
+ if(s.role&&s.user){
+   currentRole=s.role;currentUser=s.user;
+   if(s.role==="teacher")showTeacher();
+   else if(s.role==="student")showStudent();
+   else if(s.role==="admin")showAdmin();
+ }
+});
+function rememberSession(){ if(currentRole&&currentUser) localStorage.setItem("session",JSON.stringify({role:currentRole,user:currentUser})); }
+function logout(){
+ currentUser=null;currentRole=null;
+ localStorage.removeItem("session");
+ ["teacher-dashboard","student-dashboard","admin-dashboard"].forEach(x=>document.getElementById(x).classList.add("hidden"));
+ document.getElementById("auth-section").classList.remove("hidden");
+ setExtra();
+}
+
+// ===== Teacher Dashboard =====
+function showTeacher(){
+ document.getElementById("auth-section").classList.add("hidden");
+ const d=document.getElementById("teacher-dashboard");d.classList.remove("hidden");
+ d.innerHTML=`<h2>Teacher Dashboard</h2>
+ <p>Welcome, ${currentUser.name} (${currentUser.subject})</p>
+ <button onclick="logout()">Logout</button>
+ <section>
+  <label>Class:</label><select id="tClass"><option>9</option><option>10</option></select>
+  <label>Subject:</label><input id="tSubject" value="${currentUser.subject}" readonly>
+  <label>Topic:</label><input id="tTopic" placeholder="Enter Topic" value="${lastTopic}">
+  <label>Type:</label><select id="tType" onchange="toggleType()">
+   <option value="mcq">MCQ</option><option value="fill">Fill</option><option value="tf">True/False</option></select>
+  <label>Question:</label><textarea id="tQ"></textarea>
+  <div id="mcqBlk">
+   <label>Option A:</label><input id="optA"><label>Option B:</label><input id="optB">
+   <label>Option C:</label><input id="optC"><label>Option D:</label><input id="optD">
+   <label>Correct:</label><select id="corr"><option>A</option><option>B</option><option>C</option><option>D</option></select>
+  </div>
+  <div id="ansBlk" style="display:none"><label>Answer:</label><input id="tAns"></div>
+  <button onclick="saveQ()">Save Question</button>
+ </section>
+ <h3>Questions</h3><div id="qList"></div>`;
+ renderQ(); rememberSession();
+}
+function toggleType(){
+ const t=document.getElementById("tType").value;
+ document.getElementById("mcqBlk").style.display=t==="mcq"?"block":"none";
+ document.getElementById("ansBlk").style.display=t==="mcq"?"none":"block";
+}
+function saveQ(){
+ const cls=tClass.value,sub=tSubject.value,topic=tTopic.value.trim(),type=tType.value,q=tQ.value.trim();
+ if(!topic||!q)return alert("Enter Topic & Question");
+ let ans="",opts=[];
+ if(type==="mcq"){opts=[optA.value,optB.value,optC.value,optD.value];ans=opts[["A","B","C","D"].indexOf(corr.value)];}
+ else ans=tAns.value;
+ let qs=load("questions");qs.push({id:Date.now(),class:cls,subject:sub,topic,type,question:q,options:opts,answer:ans});
+ save("questions",qs);lastTopic=topic;tQ.value="";optA.value=optB.value=optC.value=optD.value=tAns.value="";
+ renderQ();alert("Question Saved!");
+}
+function renderQ(){
+ const qList=document.getElementById("qList"),qs=load("questions").filter(q=>q.subject===currentUser.subject);
+ if(!qs.length){qList.innerHTML="<p>No questions yet.</p>";return;}
+ const topics={};qs.forEach(q=>{if(!topics[q.topic])topics[q.topic]=[];topics[q.topic].push(q);});
+ let html="";for(let t in topics){
+  html+=`<details><summary><b>${t}</b> (${topics[t].length} Questions)</summary><ul>`;
+  topics[t].forEach(q=>html+=`<li>${q.question}</li>`);html+="</ul></details>";
+ }
+ qList.innerHTML=html;
+}
+
+// ===== Student Dashboard =====
+function showStudent(){
+ document.getElementById("auth-section").classList.add("hidden");
+ const d=document.getElementById("student-dashboard");
+ d.classList.remove("hidden");
+ d.innerHTML=`<h2>Student Dashboard</h2>
+ <p>Welcome, ${currentUser.name} (Class ${currentUser.class})</p>
+ <button onclick="logout()">Logout</button>
+ <section>
+  <label>Subject:</label><select id="sSubject"></select>
+  <label>Topic:</label><select id="sTopic"></select>
+  <label>Question Type:</label>
+   <select id="sType"><option value="mcq">MCQ</option><option value="fill">Fill</option><option value="tf">True/False</option></select>
+  <label>No. of Questions:</label><input type="number" id="sCount" value="5" min="1">
+  <button onclick="generateExam()">Generate Exam</button>
+ </section>
+ <div id="examArea"></div>`;
+ loadSubjects(); rememberSession();
+}
+function loadSubjects(){
+ const qs=load("questions"),subs=[...new Set(qs.map(q=>q.subject))];
+ const sel=document.getElementById("sSubject");
+ sel.innerHTML=subs.map(s=>`<option>${s}</option>`).join("");
+ sel.onchange=()=>loadTopics(sel.value);
+ if(subs.length)loadTopics(subs[0]);
+}
+function loadTopics(sub){
+ const qs=load("questions").filter(q=>q.subject===sub);
+ const topics=[...new Set(qs.map(q=>q.topic))];
+ const sel=document.getElementById("sTopic");
+ sel.innerHTML=topics.map(t=>`<option>${t}</option>`).join("");
+}
+
+// ===== Exam + Timer =====
+function generateExam(){
+ const cls=currentUser.class,sub=sSubject.value,topic=sTopic.value,type=sType.value,count=parseInt(sCount.value);
+ let qs=load("questions").filter(q=>q.class==cls && q.subject==sub && q.topic==topic && q.type==type);
+ if(!qs.length)return alert("No questions available!");
+ qs=qs.sort(()=>Math.random()-0.5).slice(0,count);
+ const area=document.getElementById("examArea");
+ let html="<h3>Exam</h3><form id='examForm'>";
+ qs.forEach((q,i)=>{
+  html+=`<div><b>Q${i+1}:</b> ${q.question}<br>`;
+  if(q.type==="mcq")
+   q.options.forEach((o,j)=>html+=`<label><input type='radio' name='q${i}' value='${o}'> ${o}</label><br>`);
+  else if(q.type==="tf")
+   html+="<select name='q"+i+"'><option>True</option><option>False</option></select><br>";
+  else html+="<input name='q"+i+"' placeholder='Answer'><br>";
+  html+="</div><hr>";
+ });
+ html+=`<p id="timerDisplay"><b>Time Left:</b> <span id="timeLeft"></span></p>`;
+ html+="<button type='button' onclick='submitExam()'>Submit Exam</button></form>";
+ area.innerHTML=html;
+ window.examQs=qs;
+
+ // Timer: 1 minute per question
+ let timeLeft=count*60;
+ clearInterval(timer);
+ function tick(){
+   let m=Math.floor(timeLeft/60),s=timeLeft%60;
+   document.getElementById("timeLeft").textContent=`${m}:${s.toString().padStart(2,'0')}`;
+   if(timeLeft<=0){clearInterval(timer);submitExam();}
+   timeLeft--;
+ }
+ tick(); timer=setInterval(tick,1000);
+}
+function submitExam(){
+ clearInterval(timer);
+ const form=document.getElementById("examForm");
+ if(!form)return;
+ let correct=0,resTable="<h3>Results</h3><table class='table-box'><tr><th>#</th><th>Question</th><th>Student Answer</th><th>Correct Answer</th><th>Result</th></tr>";
+ examQs.forEach((q,i)=>{
+  const ans=form[`q${i}`].value.trim();
+  const ok=(ans.toLowerCase()==q.answer.toLowerCase());
+  if(ok)correct++;
+  resTable+=`<tr><td>${i+1}</td><td>${q.question}</td><td>${ans}</td><td>${q.answer}</td><td>${ok?"✅":"❌"}</td></tr>`;
+ });
+ const score=Math.round((correct/examQs.length)*100);
+ resTable+=`</table><h4>Score: ${score}%</h4>`;
+ document.getElementById("examArea").innerHTML=resTable;
+ let results=load("results");
+ results.push({name:currentUser.name,class:currentUser.class,subject:sSubject.value,score});
+ save("results",results);
+ alert("Exam submitted successfully!");
+}
+
+// ===== Admin Dashboard =====
+function showAdmin(){
+ document.getElementById("auth-section").classList.add("hidden");
+ const d=document.getElementById("admin-dashboard");
+ d.classList.remove("hidden");
+ const t=load("teachers"),s=load("students"),q=load("questions"),r=load("results");
+ d.innerHTML=`<h2>Admin Dashboard</h2>
+ <p>Welcome, Admin</p>
+ <div><b>Teachers:</b> ${t.length} | <b>Students:</b> ${s.length} | <b>Questions:</b> ${q.length} | <b>Results:</b> ${r.length}</div>
+ <div class='admin-actions'>
+  <button onclick='manageTeachers()'>Manage Teachers</button>
+  <button onclick='manageStudents()'>Manage Students</button>
+  <button onclick='viewQuestions()'>View Questions</button>
+  <button onclick='viewResults()'>View Results / Download PDF</button>
+  <button onclick='logout()'>Logout</button>
+ </div>
+ <div id='adminArea'></div>`;
+ rememberSession();
+}
+function manageTeachers(){
+ const list=load("teachers"),a=document.getElementById("adminArea");
+ if(!list.length)return a.innerHTML="<p>No teachers found.</p>";
+ let h="<h3>Teachers</h3><table class='table-box'><tr><th>Name</th><th>ID</th><th>Subject</th><th>Action</th></tr>";
+ list.forEach((x,i)=>h+=`<tr><td>${x.name}</td><td>${x.id}</td><td>${x.subject}</td><td><button onclick='deleteTeacher(${i})'>Delete</button></td></tr>`);
+ h+="</table>";a.innerHTML=h;
+}
+function deleteTeacher(index){
+ if(confirm("Delete this teacher?")){
+  let t=load("teachers");t.splice(index,1);save("teachers",t);
+  alert("Teacher deleted.");manageTeachers();
+ }
+}
+function manageStudents(){
+ const list=load("students"),a=document.getElementById("adminArea");
+ if(!list.length)return a.innerHTML="<p>No students found.</p>";
+ let h="<h3>Students</h3><table class='table-box'><tr><th>Name</th><th>ID</th><th>Class</th><th>Action</th></tr>";
+ list.forEach((x,i)=>h+=`<tr><td>${x.name}</td><td>${x.id}</td><td>${x.class}</td><td><button onclick='deleteStudent(${i})'>Delete</button></td></tr>`);
+ h+="</table>";a.innerHTML=h;
+}
+function deleteStudent(index){
+ if(confirm("Delete this student?")){
+  let s=load("students");s.splice(index,1);save("students",s);
+  alert("Student deleted.");manageStudents();
+ }
+}
+function viewQuestions(){
+ const list=load("questions"),a=document.getElementById("adminArea");
+ if(!list.length)return a.innerHTML="<p>No questions found.</p>";
+ let h="<h3>Questions</h3><table class='table-box'><tr><th>Class</th><th>Subject</th><th>Topic</th><th>Type</th></tr>";
+ list.forEach(x=>h+=`<tr><td>${x.class}</td><td>${x.subject}</td><td>${x.topic}</td><td>${x.type}</td></tr>`);h+="</table>";a.innerHTML=h;
+}
+function viewResults(){
+ const list=load("results"),a=document.getElementById("adminArea");
+ if(!list.length)return a.innerHTML="<p>No results found.</p>";
+ let h="<h3>Results</h3><table class='table-box'><tr><th>Name</th><th>Class</th><th>Subject</th><th>Score</th></tr>";
+ list.forEach(x=>h+=`<tr><td>${x.name}</td><td>${x.class}</td><td>${x.subject}</td><td>${x.score}%</td></tr>`);h+="</table>";
+ h+="<button onclick='downloadPDF()'>Download PDF</button>";a.innerHTML=h;
+}
+function downloadPDF(){
+ const list=load("results");
+ if(!list.length)return alert("No results to download!");
+ const w=window.open("");
+ let html="<h2>Daffodils High School – Exam Results</h2><table border='1' cellspacing='0' cellpadding='5'><tr><th>Name</th><th>Class</th><th>Subject</th><th>Score</th></tr>";
+ list.forEach(x=>html+=`<tr><td>${x.name}</td><td>${x.class}</td><td>${x.subject}</td><td>${x.score}%</td></tr>`);
+ html+="</table><p>Generated by Admin</p>";w.document.write(html);w.print();w.close();
+}
+</script>
+</body>
+</html>
